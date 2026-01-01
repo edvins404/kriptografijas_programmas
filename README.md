@@ -1,90 +1,88 @@
-﻿# AES-128 (1 bloks) un CBC failu šifrs (C# programmēšanas valoda)
+﻿# AES-128 un AES-128-CBC (konsoles projekts)
 
-## Ideja īsumā
-Šajā projektā tika uzprogrammēts **AES-128** bloka šifrs (šifrēšana + atšifrēšana) un uz tā bāzes arī **CBC failu šifrs**. 
+Šajā repozitorijā: konsoles programma ar diviem režīmiem. Viens režīms ir AES-128 šifrēšana/atšifrēšana vienam 16 baitu blokam, un otrs režīms ir failu šifrēšana CBC režīmā (AES-128-CBC).
 
-Projekts ir sadalīts sekojoši:
-- `Aes128` klase realizē AES darbību ar **vienu 16 baitu (128 bitu) bloku**.
-- CBC režīms (failiem) izmanto `Aes128` kā “melno kasti” katra bloka šifrēšanai/atšifrēšanai.
 
----
+## Saturs
 
-## Funkcionalitāte
+Galvenie faili projektā:
+- `Program.cs` – galvenā izvēlne un režīmu palaišana.
+- `AES128.cs` – AES-128 realizācija (Encrypt/Decrypt vienam blokam, key schedule, transformācijas).
+- `AES.cs` – konsoles daļa AES-128 režīmam (ievade, komandas, self-test).
+- `CBC.cs` – konsoles daļa CBC režīmam (failu šifrēšana/atšifrēšana, IV, padding, self-test).
 
-### 1) AES-128 vienam blokam
-Atbilstoši prasībām programma ļauj:
-- izvēlēties darbību: **Encrypt (E)** vai **Decrypt (D)**
-- ievadīt **128 bitu atslēgu** kā **32 hex simbolus** (`0-9a-f`)
-- ievadīt **128 bitu datu bloku** kā **32 hex simbolus** (vai arī kā tekstu, kuru programma pārvērš 16 baitos)
-- iegūt rezultātu atpakaļ **32 hex formā**
 
-Papildus ērtībai konsoles interfeisā ir ieviesta:
-- iespēja **ģenerēt atslēgu automātiski** (tikai ērtībai),
-- **SelfTest** ar zināmo FIPS-197 testvektoru.
+### 1) AES-128 (viens 16 baitu bloks)
 
-### 2) CBC failu šifrs (AES-CBC)
-CBC režīmā tiek šifrēts/atšifrēts fails pa 16 baitu blokiem:
-- šifrējot ir vajadzīgs **IV (16 baiti)**,
-- atšifrējot **IV tiek ņemts no nošifrētā faila 1. bloka**,
-- nošifrētais fails ir **par 1 bloku garāks**, jo sākumā tiek pierakstīts IV.
+Šifrē vai atšifrē vienu 16 baitu (128 bitu) bloku ar AES-128.
 
----
+**Ievade**  
+- Atslēga: 128 biti (16 baiti) = **32 hex simboli**  
+- Dati: 16 baiti, ko var ievadīt:
+  - kā **32 hex simbolus**, vai
+  - kā tekstu (UTF-8), kuru programma ieliek 16 baitu blokā (ja teksts īsāks, pārējo aizpilda ar `0x00`)
 
-## AES-128 realizācija (FIPS-197 loģika)
-AES implementācija balstās uz standarta definīciju (FIPS-197): bloks 128 biti, atslēga 128 biti, **Nr = 10 raundi**.
-
-### Datu reprezentācija (State)
-Ievades 16 baiti tiek ielikti **4x4 State** masīvā (kolonnu kārtībā), kā tas ir AES aprakstā.
-
-### Šifrēšanas soļi (katrs raunds)
-Šifrēšanā tiek izpildītas klasiskās transformācijas:
-1. `SubBytes` (S-box aizvietošana)
-2. `ShiftRows`
-3. `MixColumns` (izņemot pēdējo raundu)
-4. `AddRoundKey` (XOR ar raunda atslēgu)
-
-### Atšifrēšana
-Atšifrēšana izmanto inversās operācijas:
-- `InvShiftRows`, `InvSubBytes`, `InvMixColumns`, un `AddRoundKey` (XOR ir pats sev inverss).
-
-### Key schedule (raundu atslēgas)
-Atslēgu grafiks (KeyExpansion) ģenerē 11 atslēgas (sākotnējā + 10 raundiem), izmantojot:
-- `RotWord`, `SubWord` (S-box), un `Rcon` konstantes.
-
-### GF(2^8) reizināšana (MixColumns)
-`MixColumns` prasa reizināšanu Galua laukā GF(2^8), tipiski ar `xtime()` pieeju (kreisā nobīde + XOR ar `0x1b`, ja vajag).
+**Izvade**  
+- Rezultātu kā 32 hex simbolus (16 baiti)  
+- Papildus arī kā tekstu, ērtībai
+- 
+**Paštests**  
+Ir komanda, kas palaiž FIPS-197 testa vektoru (skat. sadaļu “Paštests (FIPS-197)”).
 
 ---
 
-## CBC režīms (failu šifrēšana)
-CBC ideja ir “ieķēdēti bloki”:
-- `C0 = IV`
-- `Ci = AES_Enc( Pi XOR C{i-1} )`
-- atšifrējot: `Pi = AES_Dec(Ci) XOR C{i-1}`
+### 2) AES-128-CBC (failu šifrēšana)
 
-IV pievienošana faila sākumā nozīmē, ka nošifrētais fails kļūst par 16 baitiem garāks.
+Šifrē vai atšifrē failu, izmantojot CBC režīmu virs AES-128 bloka šifra. Fails tiek apstrādāts pa 16 baitu blokiem.
 
----
+**Ievade**  
+- Atslēga: 128 biti (16 baiti) = **32 hex simboli** 
+- Šifrējot: IV (128 biti = 32 hex simboli) 
+- Failu ceļus: ievades fails + izvades fails
 
-## Konsoles lietošana (UI)
-AES “1 bloka” programma strādā interaktīvi ar komandām:
-- `E` – šifrēt
-- `D` – atšifrēt
-- `R` – izmantot pēdējo rezultātu kā nākamo ievadi
-- `K` – nomainīt/ģenerēt atslēgu
-- `T` – palaist FIPS testu
-- `Q` – iziet
+**Izvade**  
+- Šifrējot: šifrēto failu, kura sākumā ir IV (1. bloks), un pēc tam šifrteksts  
+- Atšifrējot: atjaunoto plaintext failu
 
-Ievades formāti:
-- bloks var būt **HEX (32 simboli)** vai **teksts (UTF-8 → 16 baiti, pārējais tiek aizpildīts ar nullēm)**
+**Piezīmes**  
+- Šifrētais fails ir **par 1 AES bloku (16 baitiem) garāks**, jo pirmais bloks ir IV.  
+- Plaintext tiek papildināts ar **PKCS#7 padding**, lai garums dalītos ar 16. Atšifrējot padding tiek noņemts.
 
 ---
 
-## Testēšana
-- Iekļauts **SelfTest** ar zināmo AES-128 testvektoru (Key/Plaintext/Ciphertext) no FIPS-197.
+## Kā izskatās šifrētais fails (CBC formāts)
 
----
+CBC šifrētais fails ir šāds:
 
-## Piezīmes / ierobežojumi
-- Atslēgas automātiskā ģenerēšana ir tikai ērtībai; uzdevuma būtība (AES realizācija bez gataviem moduļiem/bibliotēkām) no tā nemainās.
-- CBC režīmā vienai atslēgai dažādiem failiem jālieto atšķirīgs IV.
+- 1. bloks (16 baiti): **IV**
+- pārējie bloki: **CBC šifrteksts**
+
+Tas nozīmē, ka šifrētais fails vienmēr ir par **16 baitiem garāks** nekā plaintext fails.
+
+## Projektējuma apraksts
+
+AES implementācijā tiek ievērota klasiskā AES-128 struktūra (10 raundi). Šifrēšanā ir:
+- sākumā `AddRoundKey`,
+- tad 9 pilnie raundi ar `SubBytes`, `ShiftRows`, `MixColumns`, `AddRoundKey`,
+- un pēdējais raunds bez `MixColumns`.
+
+Atšifrēšanā tiek izmantotas inversās transformācijas, un raundu atslēgas tiek pielietotas apgrieztā secībā (sākot ar pēdējā raunda atslēgu).
+
+CBC daļā tiek lietota CBC formula:
+- šifrēšana: `C_i = E_K(P_i XOR C_{i-1})`, kur `C_0 = IV`
+- atšifrēšana: `P_i = D_K(C_i) XOR C_{i-1}`
+
+Failu apstrāde tiek veikta pa 16 baitu blokiem, un `IV` tiek saglabāts faila sākumā.
+
+
+
+## Paštests (FIPS-197)
+
+Programma pārbauda klasisko AES-128 testa vektoru:
+
+- Key: `000102030405060708090a0b0c0d0e0f`  
+- Plaintext: `00112233445566778899aabbccddeeff`  
+- Ciphertext (jābūt): `69c4e0d86a7b0430d8cdb78070b4c55a`
+
+Ja tas sakrīt, programma izvada, ka tests ir izdevies (`OK`). 
+
