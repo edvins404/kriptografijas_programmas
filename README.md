@@ -1,13 +1,19 @@
-﻿# AES-128 un AES-128-CBC (konsoles projekts)
+﻿# AES-128 un AES-128-CBC (realizēts C# programmēšanas valodā)
 
-Šajā repozitorijā: konsoles programma ar diviem režīmiem. Viens režīms ir AES-128 šifrēšana/atšifrēšana vienam 16 baitu blokam, un otrs režīms ir failu šifrēšana CBC režīmā (AES-128-CBC).
+Šajā repozitorijā: programma ar diviem režīmiem, kur viens režīms ir AES-128 šifrēšana/atšifrēšana vienam 16 baitu blokam un otrs  ir failu šifrēšana CBC režīmā (AES-128-CBC).
 
+### Kriptogrāfisko bibliotēku izmantošana
+
+AES-128 bloka šifrs un CBC režīms ir realizēti neizmantojot gatavus ietvara šifrēšanas moduļus/bibliotēkas. 
+
+`System.Security.Cryptography` šajā projektā tiek izmantots tikai kriptogrāfiski drošai nejaušu baitu ģenerēšanai atslēgām un inicializācijas vektoram (IV), izmantojot `RandomNumberGenerator.Fill(...)`. 
+Šī funkcionalitāte ir paredzēta papildus ērtībai. Atslēgu un IV ir iespējams ievadīt arī manuāli (32 hex simboli), atbilstoši uzdevuma ievades formātam.
 
 ## Saturs
 
 Galvenie faili projektā:
 - `Program.cs` – galvenā izvēlne un režīmu palaišana.
-- `AES128.cs` – AES-128 realizācija (Encrypt/Decrypt vienam blokam, key schedule, transformācijas).
+- `AES128.cs` – AES-128 (core) realizācija (Encrypt/Decrypt vienam blokam, key schedule, transformācijas).
 - `AES.cs` – konsoles daļa AES-128 režīmam (ievade, komandas, self-test).
 - `CBC.cs` – konsoles daļa CBC režīmam (failu šifrēšana/atšifrēšana, IV, padding, self-test).
 
@@ -19,19 +25,19 @@ Galvenie faili projektā:
 **Ievade**  
 - Atslēga: 128 biti (16 baiti) = **32 hex simboli**  
 - Dati: 16 baiti, ko var ievadīt:
-  - kā **32 hex simbolus**, vai
-  - kā tekstu (UTF-8), kuru programma ieliek 16 baitu blokā (ja teksts īsāks, pārējo aizpilda ar `0x00`)
+  - kā **32 hex simbolus**,
+  - kā tekstu (UTF-8), kuru programma ieliek 16 baitu blokā (ja teksts ir īsāks, tad pārējais tiek aizpildīts ar `0x00`)
 
 **Izvade**  
 - Rezultātu kā 32 hex simbolus (16 baiti)  
-- Papildus arī kā tekstu, ērtībai
-- 
+- Papildus klāt kā tekstu, ērtībai
+
 **Paštests**  
 Ir komanda, kas palaiž FIPS-197 testa vektoru (skat. sadaļu “Paštests (FIPS-197)”).
 
 ---
 
-### 2) AES-128-CBC (failu šifrēšana)
+### 2) AES-128-CBC 
 
 Šifrē vai atšifrē failu, izmantojot CBC režīmu virs AES-128 bloka šifra. Fails tiek apstrādāts pa 16 baitu blokiem.
 
@@ -45,19 +51,19 @@ Ir komanda, kas palaiž FIPS-197 testa vektoru (skat. sadaļu “Paštests (FIPS
 - Atšifrējot: atjaunoto plaintext failu
 
 **Piezīmes**  
-- Šifrētais fails ir **par 1 AES bloku (16 baitiem) garāks**, jo pirmais bloks ir IV.  
-- Plaintext tiek papildināts ar **PKCS#7 padding**, lai garums dalītos ar 16. Atšifrējot padding tiek noņemts.
+- Šifrētais fails sākas ar **IV (1 AES bloks = 16 baiti)**.  
+- Plaintext tiek papildināts ar **PKCS#7 padding**, lai garums dalītos ar 16. Atšifrējot padding tiek noņemts.  
 
 ---
 
-## Kā izskatās šifrētais fails (CBC formāts)
+## Šifrētais fails (CBC)
 
-CBC šifrētais fails ir šāds:
+CBC šifrētais fails:
 
 - 1. bloks (16 baiti): **IV**
 - pārējie bloki: **CBC šifrteksts**
 
-Tas nozīmē, ka šifrētais fails vienmēr ir par **16 baitiem garāks** nekā plaintext fails.
+Tas nozīmē, ka šifrētā faila sākumā ir IV (16 baiti). Papildus tiek lietots PKCS#7 padding, tāpēc šifrētais fails ir par 16 baitiem + padding garumu (1..16 baiti) garāks nekā plaintext.
 
 ## Projektējuma apraksts
 
