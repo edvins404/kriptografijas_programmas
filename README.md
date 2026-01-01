@@ -39,7 +39,7 @@ Ir komanda, kas palaiž FIPS-197 testa vektoru (skat. sadaļu “Paštests (FIPS
 
 ### 2) AES-128-CBC 
 
-Šifrē vai atšifrē failu, izmantojot CBC režīmu virs AES-128 bloka šifra. Fails tiek apstrādāts pa 16 baitu blokiem.
+Šifrē vai atšifrē failu, izmantojot AES-128 bloka šifru CBC režīmā. Fails tiek apstrādāts pa 16 baitu blokiem.
 
 **Ievade**  
 - Atslēga: 128 biti (16 baiti) = **32 hex simboli** 
